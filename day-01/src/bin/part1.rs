@@ -1,26 +1,28 @@
 fn main() {
     let input = include_str!("input.txt");
-    let lines = input.split("\n");
-    println!("{}", lines.into_iter().map(|a| -> u16 {part1(a)}).fold(0, |acc, num| -> u16 {acc + num}))
+    let lines = input.split('\n');
+    println!(
+        "{}",
+        lines.into_iter().map(|a| -> u16 { part1(a) }).sum::<u16>()
+    );
 }
-
 
 fn part1(line: &str) -> u16 {
     let mut first_num = 0;
     for c in line.chars() {
-        if c >= '0' && c <='9' {
-            first_num = c as u8 - '0' as u8;
+        if c.is_ascii_digit() {
+            first_num = c as u8 - b'0';
             break;
         }
     }
     let mut last_num = 0;
     for c in line.chars().rev() {
-        if c >= '0' && c <='9' {
-            last_num = c as u8 - '0' as u8;
+        if c.is_ascii_digit() {
+            last_num = c as u8 - b'0';
             break;
         }
     }
-    return (first_num * 10) as u16 + last_num as u16;
+    (first_num * 10) as u16 + last_num as u16
 }
 
 #[cfg(test)]

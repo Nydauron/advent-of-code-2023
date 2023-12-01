@@ -2,17 +2,25 @@ use std::cmp::min;
 
 fn main() {
     let input = include_str!("input.txt");
-    let lines = input.split("\n");
-    println!("{}", lines.into_iter().map(|a| -> u32 {part2(a) as u32}).fold(0, |acc, num| -> u32 {acc + num}))
+    let lines = input.split('\n');
+    println!(
+        "{}",
+        lines
+            .into_iter()
+            .map(|a| -> u32 { part2(a) as u32 })
+            .sum::<u32>()
+    );
 }
 
-static VALID_WORDS: [&str; 9] = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine"];
+static VALID_WORDS: [&str; 9] = [
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+];
 
 fn part2(line: &str) -> u16 {
     let mut first_num = 0;
     for (idx, c) in line.chars().enumerate() {
-        if c >= '0' && c <='9' {
-            first_num = c as u8 - '0' as u8;
+        if c.is_ascii_digit() {
+            first_num = c as u8 - b'0';
             break;
         }
         let slice_len = 5;
@@ -33,13 +41,13 @@ fn part2(line: &str) -> u16 {
     }
     let mut last_num = 0;
     for (idx, c) in line.chars().rev().enumerate() {
-        if c >= '0' && c <='9' {
-            last_num = c as u8 - '0' as u8;
+        if c.is_ascii_digit() {
+            last_num = c as u8 - b'0';
             break;
         }
         let slice_len = 5;
         let start_slice_idx = line.len() - idx - 1;
-        let end_slice_idx = min(line.len(), line.len() - idx - 1+ slice_len);
+        let end_slice_idx = min(line.len(), line.len() - idx - 1 + slice_len);
         let slice = &line[start_slice_idx..end_slice_idx];
         let mut break_out = false;
         for (word_idx, word) in VALID_WORDS.into_iter().enumerate() {
@@ -53,7 +61,7 @@ fn part2(line: &str) -> u16 {
             break;
         }
     }
-    return (first_num * 10) as u16 + last_num as u16;
+    (first_num * 10) as u16 + last_num as u16
 }
 
 #[cfg(test)]
