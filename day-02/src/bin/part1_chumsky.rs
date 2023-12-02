@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use chumsky::{primitive::just, text, IterParser, Parser};
 
 fn main() {
@@ -8,26 +6,39 @@ fn main() {
     println!("{}", games.map(part1_game).sum::<u32>());
 }
 
+#[derive(PartialEq, Eq, Debug)]
+struct Cubes {
+    pub red: u32,
+    pub green: u32,
+    pub blue: u32,
+}
+
+static MAX_CUBES: Cubes = Cubes {
+    red: 12,
+    green: 13,
+    blue: 14,
+};
 static IMPOSSIBLE_GAME: u32 = 0;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
-struct Color<'a> {
-    pub name: &'a str,
-    pub amount: u32,
+enum Color {
+    Red(u32),
+    Green(u32),
+    Blue(u32),
 }
 
 #[derive(PartialEq, Debug, Clone)]
-struct Round<'a> {
-    pub colors: Vec<Color<'a>>,
+struct Round {
+    pub colors: Vec<Color>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
-struct Game<'a> {
+struct Game {
     pub id: u32,
-    pub rounds: Vec<Round<'a>>,
+    pub rounds: Vec<Round>,
 }
 
-fn parser<'a>() -> impl Parser<'a, &'a str, Game<'a>> {
+fn parser<'a>() -> impl Parser<'a, &'a str, Game> {
     let game_id = just("Game ")
         .ignore_then(text::int(10))
         .from_str::<u32>()
@@ -38,7 +49,13 @@ fn parser<'a>() -> impl Parser<'a, &'a str, Game<'a>> {
         .from_str::<u32>()
         .unwrapped()
         .then(text::ascii::ident())
-        .map(|(amount, name)| Color { name, amount });
+        .map(|(amount, name)| match name {
+            "red" => Ok(Color::Red(amount)),
+            "blue" => Ok(Color::Blue(amount)),
+            "green" => Ok(Color::Green(amount)),
+            _ => Err(format!("\"{}\" is not a valid color", name)),
+        })
+        .unwrapped();
     let round = color
         .separated_by(just(','))
         .collect::<Vec<_>>()
@@ -50,8 +67,6 @@ fn parser<'a>() -> impl Parser<'a, &'a str, Game<'a>> {
 }
 
 fn part1_game(game_input: &str) -> u32 {
-    let possible_cubes: HashMap<&str, u32> =
-        HashMap::from([("red", 12), ("green", 13), ("blue", 14)]);
     let game = parser()
         .parse(game_input)
         .into_result()
@@ -65,10 +80,10 @@ fn part1_game(game_input: &str) -> u32 {
             round
                 .colors
                 .iter()
-                .map(|color| {
-                    let max_color_allowed =
-                        possible_cubes.get(color.name).expect("invlid color found");
-                    color.amount <= *max_color_allowed
+                .map(|color| match color {
+                    Color::Red(amount) => *amount <= MAX_CUBES.red,
+                    Color::Green(amount) => *amount <= MAX_CUBES.green,
+                    Color::Blue(amount) => *amount <= MAX_CUBES.blue,
                 })
                 .fold(true, and_reduce)
         })
@@ -99,38 +114,20 @@ mod test {
             rounds: vec![
                 Round{
                     colors: vec![
-                        Color{
-                            name: "blue",
-                            amount: 3
-                        },
-                        Color{
-                            name: "red",
-                            amount: 4,
-                        }
+                        Color::Blue(3),
+                        Color::Red(4),
                     ]
                 },
                 Round{
                     colors: vec![
-                        Color{
-                            name: "red",
-                            amount: 1,
-                        },
-                        Color{
-                            name: "green",
-                            amount: 2,
-                        },
-                        Color{
-                            name: "blue",
-                            amount: 6,
-                        },
+                        Color::Red(1),
+                        Color::Green(2),
+                        Color::Blue(6),
                     ]
                 },
                 Round{
                     colors: vec![
-                        Color{
-                            name: "green",
-                            amount: 2,
-                        }
+                        Color::Green(2),
                     ]
                 }
             ]
