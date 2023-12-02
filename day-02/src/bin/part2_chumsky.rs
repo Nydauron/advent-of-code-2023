@@ -1,4 +1,4 @@
-use chumsky::{primitive::just, text, IterParser, Parser};
+use chumsky::prelude::*;
 
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
@@ -38,7 +38,7 @@ struct Game {
     pub rounds: Vec<Round>,
 }
 
-fn parser<'a>() -> impl Parser<'a, &'a str, Game> {
+fn parser<'a>() -> impl Parser<'a, &'a str, Game, extra::Err<Rich<'a, char>>> {
     let game_id = just("Game ")
         .ignore_then(text::int(10))
         .from_str::<u32>()
@@ -49,13 +49,12 @@ fn parser<'a>() -> impl Parser<'a, &'a str, Game> {
         .from_str::<u32>()
         .unwrapped()
         .then(text::ascii::ident())
-        .map(|(amount, name)| match name {
+        .try_map(|(amount, name), span| match name {
             "red" => Ok(Color::Red(amount)),
             "blue" => Ok(Color::Blue(amount)),
             "green" => Ok(Color::Green(amount)),
-            _ => Err("not valid color"),
-        })
-        .unwrapped();
+            _ => Err(Rich::custom(span, format!("{} is not a valid color", name))),
+        });
     let round = color
         .separated_by(just(','))
         .collect::<Vec<_>>()
@@ -159,5 +158,11 @@ mod test {
     )]
     fn test_parser(#[case] input: &str, #[case] expected: Game) {
         assert_eq!(parser().parse(input).into_result(), Ok(expected))
+    }
+
+    #[rstest]
+    #[case("Game 1: 3 blue, 4 red; 1 red, 2 purple, 6 blue; 2 green")]
+    fn test_parser_failure(#[case] input: &str) {
+        assert!(parser().parse(input).into_result().is_err());
     }
 }
