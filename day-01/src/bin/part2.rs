@@ -67,50 +67,24 @@ fn part2(line: &str) -> u16 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use rstest::rstest;
 
-    #[test]
-    fn test_2_number_string() {
-        let input = "safg2fhkjw7fdhalkf";
-        assert_eq!(part2(input), 27);
+    #[rstest]
+    #[case("safg2fhkjw7fdhalkf", 27)]
+    #[case("kjkjj5lkjf", 55)]
+    #[case("ads2kljh4jkldfas9ashdklj5dasdlk", 25)]
+    #[case("hklekogfajlekopgscgkl", 0)]
+    fn test_part1_still_works(#[case] line: &str, #[case] expected: u16) {
+        assert_eq!(part2(line), expected);
     }
-    #[test]
-    fn test_1_number_string() {
-        let input = "kjkjj5lkjf";
-        assert_eq!(part2(input), 55);
-    }
-    #[test]
-    fn test_many_number_string() {
-        let input = "ads2kljh4jkldfas9ashdklj5dasdlk";
-        assert_eq!(part2(input), 25);
-    }
-    #[test]
-    fn test_no_number_string() {
-        let input = "hklekogfajlekopgscgkl";
-        assert_eq!(part2(input), 0);
-    }
-    #[test]
-    fn test_2_word_number_string() {
-        let input = "hkthreeogfajlekopfourgkl";
-        assert_eq!(part2(input), 34);
-    }
-    #[test]
-    fn test_1_word_number_string() {
-        let input = "sdgsljksixlfdjk";
-        assert_eq!(part2(input), 66);
-    }
-    #[test]
-    fn test_many_words_and_numbers_string() {
-        let input = "dsgf4dhglkftwothree9asdkjlheightdsad";
-        assert_eq!(part2(input), 48);
-    }
-    #[test]
-    fn test_many_words_with_number_ends_string() {
-        let input = "4dhglktwothree9asdkjlheightdsad2";
-        assert_eq!(part2(input), 42);
-    }
-    #[test]
-    fn test_with_word_ends_string() {
-        let input = "ninedhglktwothree9asdkjlheightdsadthree";
-        assert_eq!(part2(input), 93);
+
+    #[rstest]
+    #[case("hkthreeogfajlekopfourgkl", 34)]
+    #[case("sdgsljksixlfdjk", 66)]
+    #[case("dsgf4dhglkftwothree9asdkjlheightdsad", 48)]
+    #[case("4dhglktwothree9asdkjlheightdsad2", 42)]
+    #[case("ninedhglktwothree9asdkjlheightdsadthree", 93)]
+    fn test_part2(#[case] line: &str, #[case] expected: u16) {
+        assert_eq!(part2(line), expected);
     }
 }

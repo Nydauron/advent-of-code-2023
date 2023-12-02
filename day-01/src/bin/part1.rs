@@ -28,25 +28,14 @@ fn part1(line: &str) -> u16 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use rstest::rstest;
 
-    #[test]
-    fn test_2_number_string() {
-        let input = "safg2fhkjw7fdhalkf";
-        assert_eq!(part1(input), 27);
-    }
-    #[test]
-    fn test_1_number_string() {
-        let input = "kjkjj5lkjf";
-        assert_eq!(part1(input), 55);
-    }
-    #[test]
-    fn test_many_number_string() {
-        let input = "ads2kljh4jkldfas9ashdklj5dasdlk";
-        assert_eq!(part1(input), 25);
-    }
-    #[test]
-    fn test_no_number_string() {
-        let input = "hklekogfajlekopgscgkl";
-        assert_eq!(part1(input), 0);
+    #[rstest]
+    #[case("safg2fhkjw7fdhalkf", 27)]
+    #[case("kjkjj5lkjf", 55)]
+    #[case("ads2kljh4jkldfas9ashdklj5dasdlk", 25)]
+    #[case("hklekogfajlekopgscgkl", 0)]
+    fn test_part1(#[case] line: &str, #[case] expected: u16) {
+        assert_eq!(part1(line), expected);
     }
 }
