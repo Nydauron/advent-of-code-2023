@@ -10,12 +10,20 @@ struct Cubes {
     pub blue: u32,
 }
 
-static POSSIBLE_CUBES : Cubes = Cubes{red: 12,green: 13, blue: 14};
+static POSSIBLE_CUBES: Cubes = Cubes {
+    red: 12,
+    green: 13,
+    blue: 14,
+};
 static IMPOSSIBLE_GAME: u32 = 0;
 
 fn part1_game(game: &str) -> u32 {
     if let Some((id, log)) = game.split_once(": ") {
-        let id = id.strip_prefix("Game ").unwrap().parse::<u32>().expect("Not a valid game id");
+        let id = id
+            .strip_prefix("Game ")
+            .unwrap()
+            .parse::<u32>()
+            .expect("Not a valid game id");
         let rounds = log.split("; ");
         for r in rounds {
             let cubes = r.split(", ");
@@ -27,18 +35,18 @@ fn part1_game(game: &str) -> u32 {
                             if number > POSSIBLE_CUBES.red {
                                 return IMPOSSIBLE_GAME;
                             }
-                        },
+                        }
                         "green" => {
                             if number > POSSIBLE_CUBES.green {
                                 return IMPOSSIBLE_GAME;
                             }
-                        },
+                        }
                         "blue" => {
                             if number > POSSIBLE_CUBES.blue {
-                                return  IMPOSSIBLE_GAME;
+                                return IMPOSSIBLE_GAME;
                             }
-                        },
-                        _ => panic!("Non-valid color provided")
+                        }
+                        _ => panic!("Non-valid color provided"),
                     }
                 } else {
                     panic!("Failed on game line: {}", game);
@@ -51,12 +59,10 @@ fn part1_game(game: &str) -> u32 {
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
     use rstest::rstest;
-
 
     #[rstest]
     #[case("Game 1: 3 blue, 4 red; 1 red, 2 green, 6 blue; 2 green", 1)]
