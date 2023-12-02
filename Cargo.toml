@@ -3,4 +3,9 @@ resolver = "2"
 members = ["day-*"]
 
 [workspace.dependencies]
+dhat = "0.3.2"
 rstest = "0.18.2"
+
+[profile.dhat]
+inherits = "release"
+debug = 1

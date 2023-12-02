@@ -6,3 +6,5 @@ run day part:
     cargo run -p {{day}} --bin {{part}}
 test day part:
     cargo test -p {{day}} --bin {{part}}
+dhat day part:
+    cargo run --profile dhat --features dhat-heap --package {{day}} --bin {{part}}
