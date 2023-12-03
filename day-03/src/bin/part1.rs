@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use nom::{character, AsChar, IResult};
 
 #[cfg(feature = "dhat-heap")]
@@ -21,69 +23,84 @@ fn is_symbol(c: char) -> bool {
     !c.is_alphanum() && c != '.'
 }
 
-fn search_for_symbol(
-    schematic: &Vec<Vec<(u32, bool)>>,
-    number_char_len: usize,
-    number_location: (usize, usize),
-) -> bool {
+#[derive(Debug)]
+enum PointType {
+    Symbol,
+    Number((usize, usize), u32),
+    Empty,
+}
+
+fn numbers_near_symbol(
+    schematic: &Vec<Vec<PointType>>,
+    symbol_location: (usize, usize),
+) -> Vec<u32> {
+    let mut numbers = HashMap::new();
     for row in schematic
         .iter()
-        .take((schematic.len() - 1).min(number_location.0 + 1))
-        .skip(0.max(number_location.0 as i64 - 1) as usize)
+        .take(symbol_location.0 + 2)
+        .skip(0.max(symbol_location.0 as i64 - 1) as usize)
     {
         for cell in row
             .iter()
-            .take((row.len() - 1).min(number_location.1 + number_char_len))
-            .skip(0.max(number_location.1 as i32 - 1) as usize)
+            .take(symbol_location.1 + 2)
+            .skip(0.max(symbol_location.1 as i64 - 1) as usize)
         {
-            if cell.1 {
-                return true;
+            if let PointType::Number(pos, value) = cell {
+                numbers.entry(*pos).or_insert(*value);
             }
         }
     }
-    false
+    let return_value = numbers.values().cloned().collect::<Vec<_>>();
+    return_value
 }
 
 fn part1(input: &str) -> u32 {
     let lines = input.lines();
-    let schematic = lines
-        .map(|line| {
-            let mut digit_slice: Option<u32> = None;
+    let schematic: Vec<Vec<PointType>> = lines
+        .enumerate()
+        .map(|(row_idx, line)| {
+            let mut digit_location: Option<((usize, usize), u32)> = None;
             line.chars()
                 .enumerate()
-                .map(|(idx, c)| {
+                .map(|(col_idx, c)| {
                     if c.is_ascii_digit() {
-                        if digit_slice.is_none() {
-                            let (_, num) = get_number(&line[idx..]).expect("no number");
-                            digit_slice = Some(num);
-                            return (num, false);
+                        if let Some((location, value)) = digit_location {
+                            PointType::Number(location, value)
+                        } else {
+                            let (_, num) = get_number(&line[col_idx..]).expect("no number");
+                            digit_location = Some(((row_idx, col_idx), num));
+                            PointType::Number((row_idx, col_idx), num)
                         }
-                        (0, false)
                     } else if is_symbol(c) {
-                        digit_slice = None;
-                        return (0, true);
+                        digit_location = None;
+                        return PointType::Symbol;
                     } else {
-                        digit_slice = None;
-                        return (0, false);
+                        digit_location = None;
+                        return PointType::Empty;
                     }
                 })
                 .collect::<Vec<_>>()
         })
         .collect::<Vec<_>>();
 
-    let mut sum = 0;
-    for (i, row) in schematic.iter().enumerate() {
-        for (j, cell) in row.iter().enumerate() {
-            if cell.0 > 0 {
-                let num_char_len = ((cell.0 as f32).log10().floor() as u32) + 1;
-                if search_for_symbol(&schematic, num_char_len as usize, (i, j)) {
-                    sum += cell.0;
-                }
-            }
-        }
-    }
-
-    sum
+    schematic
+        .iter()
+        .enumerate()
+        .map(|(i, row)| {
+            row.iter()
+                .enumerate()
+                .map(|(j, cell)| match cell {
+                    PointType::Symbol => numbers_near_symbol(&schematic, (i, j)),
+                    _ => vec![],
+                })
+                .fold(Vec::new(), |mut acc, new_nums| {
+                    acc.extend(new_nums);
+                    acc
+                })
+                .iter()
+                .sum::<u32>()
+        })
+        .sum()
 }
 
 #[cfg(test)]
