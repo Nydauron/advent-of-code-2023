@@ -77,7 +77,7 @@ fn part1_game(game_input: &str) -> u32 {
         .into_result()
         .expect("Parsing game failed");
 
-    let and_reduce = |acc, x| return acc & x;
+    let and_reduce = |acc, x| acc & x;
     if game
         .rounds
         .iter()
