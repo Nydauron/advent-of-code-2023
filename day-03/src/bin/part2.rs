@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use nom::{character, IResult};
 
@@ -23,24 +23,37 @@ fn is_symbol(c: char) -> bool {
     c == '*'
 }
 
-fn get_gear_ratio(schematic: &Vec<Vec<PointType>>, symbol_location: (usize, usize)) -> Option<u64> {
-    let mut seen_numbers = HashMap::new();
+fn get_gear_ratio(
+    schematic: &BTreeMap<(usize, usize), PointType>,
+    symbol_location: (usize, usize),
+) -> Option<u64> {
     let gear_ratio_req_count = 2;
-    for row in schematic
+    let positions = [
+        (symbol_location.0 - 1, symbol_location.1 - 1),
+        (symbol_location.0 - 1, symbol_location.1),
+        (symbol_location.0 - 1, symbol_location.1 + 1),
+        (symbol_location.0, symbol_location.1 - 1),
+        (symbol_location.0, symbol_location.1 + 1),
+        (symbol_location.0 + 1, symbol_location.1 - 1),
+        (symbol_location.0 + 1, symbol_location.1),
+        (symbol_location.0 + 1, symbol_location.1 + 1),
+    ];
+    let seen_numbers = positions
         .iter()
-        .take((schematic.len() - 1).min(symbol_location.0 + 1))
-        .skip(0.max(symbol_location.0 as i64 - 1) as usize)
-    {
-        for cell in row
-            .iter()
-            .take((schematic.len() - 1).min(symbol_location.1 + 1))
-            .skip(0.max(symbol_location.1 as i64 - 1) as usize)
-        {
+        .filter_map(|pos| {
+            let cell = schematic.get(pos);
+            let cell = cell?;
             if let PointType::Number(pos, value) = cell {
-                seen_numbers.entry(pos).or_insert(*value);
+                Some((*pos, *value))
+            } else {
+                None
             }
-        }
-    }
+        })
+        .fold(HashMap::new(), |mut acc, (pos, val)| {
+            acc.entry(pos).or_insert(val);
+            acc
+        });
+
     if seen_numbers.len() == gear_ratio_req_count {
         Some(seen_numbers.values().map(|val| *val as u64).product())
     } else {
@@ -51,51 +64,53 @@ fn get_gear_ratio(schematic: &Vec<Vec<PointType>>, symbol_location: (usize, usiz
 enum PointType {
     Symbol,
     Number((usize, usize), u32),
-    Empty,
 }
 
 fn part2(input: &str) -> u64 {
     let lines = input.lines();
-    let schematic: Vec<Vec<PointType>> = lines
+    let schematic: BTreeMap<(usize, usize), PointType> = lines
         .enumerate()
-        .map(|(row_idx, line)| {
+        .flat_map(|(row_idx, line)| {
             let mut digit_location: Option<((usize, usize), u32)> = None;
             line.chars()
                 .enumerate()
-                .map(|(col_idx, c)| {
+                .filter_map(move |(col_idx, c)| {
                     if c.is_ascii_digit() {
                         if let Some((location, value)) = digit_location {
-                            PointType::Number(location, value)
+                            Some(((row_idx, col_idx), PointType::Number(location, value)))
                         } else {
                             let (_, num) = get_number(&line[col_idx..]).expect("no number");
                             digit_location = Some(((row_idx, col_idx), num));
-                            PointType::Number((row_idx, col_idx), num)
+                            Some((
+                                (row_idx, col_idx),
+                                PointType::Number((row_idx, col_idx), num),
+                            ))
                         }
                     } else if is_symbol(c) {
                         digit_location = None;
-                        return PointType::Symbol;
+                        Some(((row_idx, col_idx), PointType::Symbol))
                     } else {
                         digit_location = None;
-                        return PointType::Empty;
+                        None
                     }
                 })
-                .collect::<Vec<_>>()
+                // 1-index the positions to prevent overflow errors when looking around symbols
+                .map(|(pos, mut point)| {
+                    if let PointType::Number(pos, val) = point {
+                        point = PointType::Number((pos.0 + 1, pos.1 + 1), val);
+                    }
+                    ((pos.0 + 1, pos.1 + 1), point)
+                })
         })
-        .collect::<Vec<_>>();
+        .collect::<BTreeMap<_, _>>();
 
     schematic
         .iter()
-        .enumerate()
-        .map(|(i, row)| {
-            row.iter()
-                .enumerate()
-                .filter_map(|(j, cell)| match cell {
-                    PointType::Symbol => get_gear_ratio(&schematic, (i, j)),
-                    _ => None,
-                })
-                .sum::<u64>()
+        .filter_map(|(pos, cell)| match cell {
+            PointType::Symbol => get_gear_ratio(&schematic, *pos),
+            _ => None,
         })
-        .sum()
+        .sum::<u64>()
 }
 
 #[cfg(test)]
