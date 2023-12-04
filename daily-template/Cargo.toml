@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 chumsky = "1.0.0-alpha.6"
 
-[dev-dependiecies]
+[dev-dependencies]
 dhat = { workspace = true }
 rstest = { workspace = true }
 
