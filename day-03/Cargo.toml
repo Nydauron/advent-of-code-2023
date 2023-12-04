@@ -10,7 +10,13 @@ nom = "7.1.3"
 
 [dev-dependencies]
 dhat = { workspace = true }
+criterion = { workspace = true }
 rstest = { workspace = true }
+
+[[bench]]
+name = "day-03-bench"
+path = "benches/benchmarks.rs"
+harness = false
 
 [features]
 dhat-heap = []
