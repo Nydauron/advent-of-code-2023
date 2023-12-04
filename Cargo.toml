@@ -4,6 +4,7 @@ members = ["day-*"]
 
 [workspace.dependencies]
 dhat = "0.3.2"
+criterion = { version = "0.4", features = ["html_reports"] }
 rstest = "0.18.2"
 
 [profile.dhat]

@@ -1,3 +1,5 @@
+use {{crate_name}}::part1::part1;
+
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
@@ -6,5 +8,6 @@ fn main() {
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
-    println!("Hello, world!");
+    let input = include_str!("../input.txt");
+    println!("{}", part1(input));
 }
