@@ -7,10 +7,10 @@ pub fn part2(input: &str) -> u32 {
     for (idx, line) in lines.enumerate() {
         let idx = idx + 1;
         let cards_won = part2_line(line);
-        let how_many_cards = *copy_card_counts.entry(idx).or_insert(1);
+        let amount_cards_to_add = *copy_card_counts.entry(idx).or_insert(1);
         for card in (idx + 1..).take(cards_won as usize) {
-            let a = *copy_card_counts.get(&card).unwrap_or(&1);
-            copy_card_counts.insert(card, a + how_many_cards);
+            let count = copy_card_counts.entry(card).or_insert(1);
+            *count = *count + amount_cards_to_add;
         }
     }
 
