@@ -7,6 +7,8 @@ run day part:
 run-debug day part:
     cargo run -p {{day}} --bin {{part}}
 test day part:
-    cargo test -p {{day}} --bin {{part}}
+    cargo test -p {{day}} {{part}}::test
 dhat day part:
     cargo run --profile dhat --features dhat-heap --package {{day}} --bin {{part}}
+bench day:
+    cargo bench -p {{day}}

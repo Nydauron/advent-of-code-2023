@@ -10,7 +10,13 @@ chumsky = "1.0.0-alpha.6"
 dhat = { workspace = true }
 
 [dev-dependencies]
+criterion = { workspace = true }
 rstest = { workspace = true }
+
+[[bench]]
+name = "day-02-bench"
+path = "benches/benchmarks.rs"
+harness = false
 
 [features]
 dhat-heap = []
