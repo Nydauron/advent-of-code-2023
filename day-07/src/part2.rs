@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use itertools::Itertools;
 use num_enum::IntoPrimitive;
 
 pub fn part2(input: &str) -> u32 {
@@ -62,37 +61,20 @@ struct Hand {
     bid: u32,
 }
 
+static COUNT_COMBOS: [&'static [usize]; 6] = [&[5], &[4], &[3, 2], &[3], &[2, 2], &[2]];
+
 impl Hand {
     pub fn get_rank(self) -> HandRank {
-        let mut card_count_map =
-            self.cards
-                .iter()
-                .fold(HashMap::<&Card, u32>::new(), |mut acc, card| {
-                    acc.entry(card)
-                        .and_modify(|a| {
-                            *a += 1;
-                        })
-                        .or_insert(1);
-                    acc
-                });
+        let mut card_count_map = self.cards.iter().counts();
         let number_of_jacks = card_count_map.remove(&Card::Jack).unwrap_or(0);
 
         let mut card_count = card_count_map
             .values()
-            .into_iter()
             .cloned()
+            .sorted_by(|a, b| b.cmp(a))
             .collect::<Vec<_>>();
 
-        card_count.sort_by(|a, b| b.cmp(&a));
-        let count_combos = [
-            Vec::from([5]),
-            Vec::from([4]),
-            Vec::from([3, 2]),
-            Vec::from([3]),
-            Vec::from([2, 2]),
-            Vec::from([2]),
-        ];
-        let most_cards = card_count.get_mut(0);
+        let most_cards = card_count.first_mut();
         if let Some(most_cards) = most_cards {
             *most_cards += number_of_jacks;
         } else {
@@ -101,14 +83,14 @@ impl Hand {
         }
 
         let mut primary_strength = 0;
-        for (idx, count_combo) in count_combos.iter().enumerate() {
+        for (idx, &count_combo) in COUNT_COMBOS.iter().enumerate() {
             let does_match_combo = card_count
                 .iter()
                 .zip(count_combo)
                 .map(|(count, combos)| count == combos)
                 .all(|does_count_match| does_count_match);
             if does_match_combo {
-                primary_strength = (count_combos.len() - idx) as u32;
+                primary_strength = (COUNT_COMBOS.len() - idx) as u32;
                 break;
             }
         }
