@@ -9,6 +9,7 @@ edition = "2021"
 dhat = { workspace = true }
 rayon = { workspace = true }
 indicatif = { workspace = true }
+itertools = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
