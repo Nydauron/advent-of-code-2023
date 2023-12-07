@@ -77,9 +77,13 @@ impl Hand {
                 });
         let number_of_jacks = card_count_map.remove(&Card::Jack).unwrap_or(0);
 
-        let mut card_count = card_count_map.into_iter().collect::<Vec<_>>();
+        let mut card_count = card_count_map
+            .values()
+            .into_iter()
+            .cloned()
+            .collect::<Vec<_>>();
 
-        card_count.sort_by(|a, b| b.1.cmp(&a.1));
+        card_count.sort_by(|a, b| b.cmp(&a));
         let count_combos = [
             Vec::from([5]),
             Vec::from([4]),
@@ -90,10 +94,10 @@ impl Hand {
         ];
         let most_cards = card_count.get_mut(0);
         if let Some(most_cards) = most_cards {
-            most_cards.1 += number_of_jacks;
+            *most_cards += number_of_jacks;
         } else {
             // card_count is empty because the hand was all full of Jacks
-            card_count.push((&Card::Jack, number_of_jacks));
+            card_count.push(number_of_jacks);
         }
 
         let mut primary_strength = 0;
@@ -101,7 +105,7 @@ impl Hand {
             let does_match_combo = card_count
                 .iter()
                 .zip(count_combo)
-                .map(|((_, count), combos)| count == combos)
+                .map(|(count, combos)| count == combos)
                 .all(|does_count_match| does_count_match);
             if does_match_combo {
                 primary_strength = (count_combos.len() - idx) as u32;

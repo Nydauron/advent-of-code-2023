@@ -75,10 +75,12 @@ impl Hand {
                     .or_insert(1);
                 acc
             })
+            .values()
             .into_iter()
+            .cloned()
             .collect::<Vec<_>>();
 
-        card_count.sort_by(|a, b| b.1.cmp(&a.1));
+        card_count.sort_by(|a, b| b.cmp(&a));
         let count_combos = [
             Vec::from([5]),
             Vec::from([4]),
@@ -93,7 +95,7 @@ impl Hand {
             let does_match_combo = card_count
                 .iter()
                 .zip(count_combo)
-                .map(|((_, count), combos)| count == combos)
+                .map(|(count, combos)| count == combos)
                 .all(|does_count_match| does_count_match);
             if does_match_combo {
                 primary_strength = (count_combos.len() - idx) as u32;
