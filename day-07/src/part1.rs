@@ -1,18 +1,23 @@
 use std::collections::HashMap;
 
+use num_enum::IntoPrimitive;
+
 pub fn part1(input: &str) -> u32 {
-    let hands = input.lines().map(parse_line).collect::<Vec<_>>();
-    let mut ranks = hands.iter().map(|hand| hand.get_rank()).collect::<Vec<_>>();
-    ranks.sort_by(|a, b| a.cmp(&b));
+    let mut ranks = input
+        .lines()
+        .map(|line| parse_line(line).get_rank())
+        .collect::<Vec<_>>();
+    ranks.sort();
 
     ranks
         .iter()
         .enumerate()
-        .map(|(idx, rank)| rank.hand.bid * (idx + 1) as u32)
+        .map(|(idx, rank)| rank.bid * (idx + 1) as u32)
         .sum()
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Hash, IntoPrimitive, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(u32)]
 enum Card {
     Two,
     Three,
@@ -26,7 +31,7 @@ enum Card {
     Jack,
     Queen,
     King,
-    Ace,
+    Ace = 12,
 }
 
 impl TryFrom<char> for Card {
@@ -57,8 +62,8 @@ struct Hand {
     bid: u32,
 }
 
-impl<'a> Hand {
-    pub fn get_rank(&'a self) -> HandRank<'a> {
+impl Hand {
+    pub fn get_rank(self) -> HandRank {
         let mut card_count = self
             .cards
             .iter()
@@ -83,10 +88,7 @@ impl<'a> Hand {
             Vec::from([2]),
         ];
 
-        let mut rank = HandRank {
-            hand: self,
-            primary_strength: 0,
-        };
+        let mut primary_strength = 0;
         for (idx, count_combo) in count_combos.iter().enumerate() {
             let does_match_combo = card_count
                 .iter()
@@ -94,35 +96,48 @@ impl<'a> Hand {
                 .map(|((_, count), combos)| count == combos)
                 .all(|does_count_match| does_count_match);
             if does_match_combo {
-                rank.primary_strength = (count_combos.len() - idx) as u32;
+                primary_strength = (count_combos.len() - idx) as u32;
                 break;
             }
         }
-        rank
+
+        let secondary_strength = self
+            .cards
+            .iter()
+            .rev()
+            .enumerate()
+            .map(|(idx, card)| {
+                let card_val: u32 = (*card).into();
+                16_u32.pow(idx as u32) * card_val
+            })
+            .sum();
+
+        HandRank {
+            primary_strength,
+            secondary_strength,
+            bid: self.bid,
+        }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct HandRank<'a> {
-    hand: &'a Hand,
+struct HandRank {
     primary_strength: u32,
+    secondary_strength: u32,
+    bid: u32,
 }
 
-impl<'a> Ord for HandRank<'a> {
+impl Ord for HandRank {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if self.primary_strength != other.primary_strength {
-            return self.primary_strength.cmp(&other.primary_strength);
+            self.primary_strength.cmp(&other.primary_strength)
+        } else {
+            self.secondary_strength.cmp(&other.secondary_strength)
         }
-        for (self_card, other_card) in self.hand.cards.iter().zip(other.hand.cards.iter()) {
-            if self_card != other_card {
-                return self_card.cmp(other_card);
-            }
-        }
-        std::cmp::Ordering::Equal
     }
 }
 
-impl<'a> PartialOrd for HandRank<'a> {
+impl PartialOrd for HandRank {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
