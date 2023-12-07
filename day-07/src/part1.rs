@@ -73,7 +73,7 @@ impl Hand {
                 .iter()
                 .zip(count_combo)
                 .map(|((_, count), combos)| count == combos)
-                .fold(true, |acc, does_count_match| acc && does_count_match);
+                .all(|does_count_match| does_count_match);
             if does_match_combo {
                 rank.primary_strength = (count_combos.len() - idx) as u32;
                 break;
@@ -82,23 +82,29 @@ impl Hand {
         rank
     }
 }
-#[derive(Debug, Clone, PartialEq, Eq, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Rank {
     primary_strength: u32,
     subrank: Vec<Card>,
 }
 
-impl PartialOrd for Rank {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+impl Ord for Rank {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if self.primary_strength != other.primary_strength {
-            return Some(self.primary_strength.cmp(&other.primary_strength));
+            return self.primary_strength.cmp(&other.primary_strength);
         }
         for (self_card, other_card) in self.subrank.iter().zip(other.subrank.iter()) {
             if self_card != other_card {
-                return Some(self_card.cmp(other_card));
+                return self_card.cmp(other_card);
             }
         }
-        Some(std::cmp::Ordering::Equal)
+        std::cmp::Ordering::Equal
+    }
+}
+
+impl PartialOrd for Rank {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -125,7 +131,7 @@ impl TryFrom<char> for Card {
 }
 
 fn parse_line(line: &str) -> Hand {
-    let (hand, bid_str) = line.split_once(" ").expect("Line did not parse");
+    let (hand, bid_str) = line.split_once(' ').expect("Line did not parse");
     let cards = hand
         .chars()
         .map(|card| Card::try_from(card).expect("Did not parse character"))
