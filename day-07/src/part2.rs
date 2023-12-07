@@ -2,16 +2,13 @@ use std::collections::HashMap;
 
 pub fn part2(input: &str) -> u32 {
     let hands = input.lines().map(parse_line).collect::<Vec<_>>();
-    let mut ranks = hands
-        .iter()
-        .map(|hand| (hand, hand.get_rank()))
-        .collect::<Vec<_>>();
-    ranks.sort_by(|a, b| a.1.cmp(&b.1));
+    let mut ranks = hands.iter().map(|hand| hand.get_rank()).collect::<Vec<_>>();
+    ranks.sort_by(|a, b| a.cmp(&b));
 
     ranks
         .iter()
         .enumerate()
-        .map(|(idx, (hand, _))| hand.bid * (idx + 1) as u32)
+        .map(|(idx, rank)| rank.hand.bid * (idx + 1) as u32)
         .sum()
 }
 
@@ -32,14 +29,14 @@ enum Card {
     Ace,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Hand {
     cards: Vec<Card>,
     bid: u32,
 }
 
-impl Hand {
-    pub fn get_rank(&self) -> Rank {
+impl<'a> Hand {
+    pub fn get_rank(&'a self) -> HandRank<'a> {
         let mut card_count_map =
             self.cards
                 .iter()
@@ -72,9 +69,9 @@ impl Hand {
             card_count.push((&Card::Jack, number_of_jacks));
         }
 
-        let mut rank = Rank {
+        let mut rank = HandRank {
+            hand: self,
             primary_strength: 0,
-            subrank: self.cards.clone(),
         };
         for (idx, count_combo) in count_combos.iter().enumerate() {
             let does_match_combo = card_count
@@ -90,18 +87,19 @@ impl Hand {
         rank
     }
 }
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Rank {
+struct HandRank<'a> {
+    hand: &'a Hand,
     primary_strength: u32,
-    subrank: Vec<Card>,
 }
 
-impl Ord for Rank {
+impl<'a> Ord for HandRank<'a> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         if self.primary_strength != other.primary_strength {
             return self.primary_strength.cmp(&other.primary_strength);
         }
-        for (self_card, other_card) in self.subrank.iter().zip(other.subrank.iter()) {
+        for (self_card, other_card) in self.hand.cards.iter().zip(other.hand.cards.iter()) {
             if self_card != other_card {
                 return self_card.cmp(other_card);
             }
@@ -110,7 +108,7 @@ impl Ord for Rank {
     }
 }
 
-impl PartialOrd for Rank {
+impl<'a> PartialOrd for HandRank<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
     }
