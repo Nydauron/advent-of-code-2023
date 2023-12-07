@@ -29,6 +29,28 @@ enum Card {
     Ace,
 }
 
+impl TryFrom<char> for Card {
+    type Error = &'static str;
+    fn try_from(value: char) -> Result<Self, Self::Error> {
+        match value {
+            '2' => Ok(Self::Two),
+            '3' => Ok(Self::Three),
+            '4' => Ok(Self::Four),
+            '5' => Ok(Self::Five),
+            '6' => Ok(Self::Six),
+            '7' => Ok(Self::Seven),
+            '8' => Ok(Self::Eight),
+            '9' => Ok(Self::Nine),
+            'T' => Ok(Self::Ten),
+            'J' => Ok(Self::Jack),
+            'Q' => Ok(Self::Queen),
+            'K' => Ok(Self::King),
+            'A' => Ok(Self::Ace),
+            _ => Err("Character cannot be parsed"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Hand {
     cards: Vec<Card>,
@@ -111,28 +133,6 @@ impl<'a> Ord for HandRank<'a> {
 impl<'a> PartialOrd for HandRank<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-impl TryFrom<char> for Card {
-    type Error = &'static str;
-    fn try_from(value: char) -> Result<Self, Self::Error> {
-        match value {
-            '2' => Ok(Self::Two),
-            '3' => Ok(Self::Three),
-            '4' => Ok(Self::Four),
-            '5' => Ok(Self::Five),
-            '6' => Ok(Self::Six),
-            '7' => Ok(Self::Seven),
-            '8' => Ok(Self::Eight),
-            '9' => Ok(Self::Nine),
-            'T' => Ok(Self::Ten),
-            'J' => Ok(Self::Jack),
-            'Q' => Ok(Self::Queen),
-            'K' => Ok(Self::King),
-            'A' => Ok(Self::Ace),
-            _ => Err("Character cannot be parsed"),
-        }
     }
 }
 
