@@ -1,40 +1,46 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use nom::{
     bytes::complete::tag, character::complete::alphanumeric1, sequence::separated_pair, IResult,
 };
+use num::integer::lcm;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+/// Unfortunately this problem wasn't worded to assume that the path offsets from the cycle that
+/// contains XXZ was equal. Upon further inspection of the input, the input just so happened to be
+/// six cycles each containing one XXA and XXZ.
+///
+/// The reason why LCM holds for this case is due to there being no offset. If there was an offset,
+/// then the current only other way to do it is by brute forcing iterating through the graph.
 pub fn part2(input: &str) -> u64 {
     let map = Map::parse_map(input);
 
-    let mut steps = 0;
-    let mut current_nodes = map.start_nodes.into_iter().collect::<HashSet<_>>();
-    loop {
-        for direction in &map.pattern {
-            if current_nodes
+    let cycles = map
+        .start_nodes
+        .par_iter()
+        .map(|&node| {
+            let mut curr_node = node;
+            let a = map
+                .pattern
                 .iter()
-                .map(|&node| node.chars().last().expect("node name is empty") == 'Z')
-                .all(|char_equals_z| char_equals_z)
-            {
-                return steps;
-            }
-            steps += 1;
-            if steps % 10000000_u64 == 0 {
-                println!("{:?}", &current_nodes);
-                println!("Step count: {}", steps);
-            }
-            current_nodes = current_nodes
-                .iter()
-                .map(|node| {
-                    let node = map.nodes.get(node).expect("Could not find node");
-                    match direction {
-                        Direction::Left => node.left,
-                        Direction::Right => node.right,
-                    }
+                .cycle()
+                .position(|direction| {
+                    let lookedup_node = map
+                        .nodes
+                        .get(curr_node)
+                        .expect("node not found in node map");
+                    curr_node = match direction {
+                        Direction::Left => lookedup_node.left,
+                        Direction::Right => lookedup_node.right,
+                    };
+                    curr_node.ends_with('Z')
                 })
-                .collect::<HashSet<_>>();
-        }
-    }
+                .unwrap()
+                + 1;
+            a
+        })
+        .reduce(|| 1, lcm);
+    return cycles as u64;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -95,7 +101,7 @@ impl<'a> Map<'a> {
         let start_nodes = nodes
             .keys()
             .filter_map(|&node| {
-                (node.chars().last().expect("Node during parsing is empty") == 'A').then_some(node)
+                (node.chars().last().expect("node during parsing is empty") == 'A').then_some(node)
             })
             .collect::<Vec<_>>();
         Self {
