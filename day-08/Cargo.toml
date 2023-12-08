@@ -1,0 +1,25 @@
+[package]
+name = "day-08"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dhat = { workspace = true }
+rayon = { workspace = true }
+indicatif = { workspace = true }
+itertools = { workspace = true }
+nom = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+rstest = { workspace = true }
+
+[[bench]]
+name = "day-08-bench"
+path = "benches/benchmarks.rs"
+harness = false
+
+[features]
+dhat-heap = []
