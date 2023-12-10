@@ -1,116 +1,95 @@
 use std::collections::{BTreeMap, HashSet, VecDeque};
 
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+
 pub fn part2(input: &str) -> usize {
-    let pipes = input
+    let (pipes, start_pos) = input
         .lines()
         .enumerate()
         .flat_map(|(row_idx, line)| {
-            line.chars()
-                .map(|c| {
-                    use Pipe::*;
-                    match c {
-                        '|' => Vertical,
-                        '-' => Horizontal,
-                        'L' => L,
-                        'J' => J,
-                        '7' => Seven,
-                        'F' => F,
-                        '.' => Ground,
-                        'S' => Start,
-                        c => panic!("Unexpected char found: {}", c),
-                    }
-                })
-                .enumerate()
-                .map(move |(col_idx, pipe)| ((row_idx, col_idx), pipe))
+            line.chars().enumerate().map(move |(col_idx, c)| {
+                use Pipe::*;
+                let pos = (row_idx, col_idx);
+                match c {
+                    '|' => ((pos, Vertical), None),
+                    '-' => ((pos, Horizontal), None),
+                    'L' => ((pos, L), None),
+                    'J' => ((pos, J), None),
+                    '7' => ((pos, Seven), None),
+                    'F' => ((pos, F), None),
+                    '.' => ((pos, Ground), None),
+                    'S' => ((pos, Start), Some((row_idx, col_idx))),
+                    c => panic!("Unexpected char found: {}", c),
+                }
+            })
         })
-        .collect::<BTreeMap<_, _>>();
+        .fold((BTreeMap::new(), None), |mut acc, (pipe, start_pos)| {
+            acc.0.insert(pipe.0, pipe.1);
+            if acc.1.is_none() {
+                acc.1 = start_pos;
+            }
+            acc
+        });
 
+    let start_pos = start_pos.expect("No start point found");
     let (max_row, max_col) = pipes.keys().last().unwrap();
-    let start_pos = pipes
-        .iter()
-        .find_map(|(pos, row)| (*row == Pipe::Start).then_some(pos))
-        .expect("No start pos found");
+    let path = [
+        PipeNode {
+            pos: start_pos.clone(),
+            going: Direction::Up,
+        },
+        PipeNode {
+            pos: start_pos.clone(),
+            going: Direction::Left,
+        },
+        PipeNode {
+            pos: start_pos.clone(),
+            going: Direction::Down,
+        },
+        PipeNode {
+            pos: start_pos.clone(),
+            going: Direction::Right,
+        },
+    ]
+    .into_par_iter()
+    .filter_map(|node| check_next(&node, &pipes))
+    .filter_map(|next_start| {
+        let mut stack = VecDeque::from([next_start.clone()]);
 
-    let mut starting_pos = VecDeque::new();
-    add_top(&mut starting_pos, start_pos);
-    add_bottom(&mut starting_pos, start_pos);
-    add_left(&mut starting_pos, start_pos);
-    add_right(&mut starting_pos, start_pos);
-
-    let path = starting_pos
-        .iter()
-        .filter_map(|&next_start| {
-            let mut stack = VecDeque::from([next_start.clone()]);
-            let mut visited = HashSet::new();
-            let mut path = VecDeque::new();
-
-            let mut found_cycle = false;
-            while !stack.is_empty() {
-                if let Some(curr) = stack.pop_back() {
-                    if let Some(path_end) = path.back() {
-                        if *path_end == curr {
-                            path.pop_back();
-                            continue;
+        let mut found_path = false;
+        while !stack.is_empty() {
+            if let Some(curr) = stack.pop_back() {
+                stack.push_back(curr);
+                if let Some(pipe) = pipes.get(&curr.pos) {
+                    use Pipe::*;
+                    if match pipe {
+                        Vertical | Horizontal | L | J | Seven | F => {
+                            if let Some(next_node) = check_next(&curr, &pipes) {
+                                stack.push_back(next_node);
+                            } else {
+                                return None;
+                            }
+                            false
                         }
-                    }
-                    if visited.contains(&curr) {
-                        continue;
-                    }
-                    path.push_back(curr);
-                    stack.push_back(curr);
-                    visited.insert(curr);
-                    if let Some(pipe) = pipes.get(&curr) {
-                        use Pipe::*;
-                        if match pipe {
-                            Vertical => {
-                                check_top(&curr, &pipes, &mut stack);
-                                check_bottom(&curr, &pipes, &mut stack);
-                                false
-                            }
-                            Horizontal => {
-                                check_left(&curr, &pipes, &mut stack);
-                                check_right(&curr, &pipes, &mut stack);
-                                false
-                            }
-                            L => {
-                                check_top(&curr, &pipes, &mut stack);
-                                check_right(&curr, &pipes, &mut stack);
-                                false
-                            }
-                            J => {
-                                check_top(&curr, &pipes, &mut stack);
-                                check_left(&curr, &pipes, &mut stack);
-                                false
-                            }
-                            Seven => {
-                                check_left(&curr, &pipes, &mut stack);
-                                check_bottom(&curr, &pipes, &mut stack);
-                                false
-                            }
-                            F => {
-                                check_right(&curr, &pipes, &mut stack);
-                                check_bottom(&curr, &pipes, &mut stack);
-                                false
-                            }
-                            Start => true,
-                            Ground => false,
-                        } {
-                            found_cycle = true;
-                            break;
-                        }
+                        Start => true,
+                        Ground => false,
+                    } {
+                        found_path = true;
+                        break;
                     }
                 }
             }
-            if found_cycle {
-                Some(path)
-            } else {
-                None
-            }
-        })
-        .max_by(|a, b| a.len().cmp(&b.len()))
-        .unwrap()
-        .into_iter()
-        .collect::<HashSet<_>>();
+        }
+        if found_path {
+            Some(stack.iter().map(|node| node.pos).collect::<Vec<_>>())
+        } else {
+            None
+        }
+    })
+    .max_by(|a, b| a.len().cmp(&b.len()))
+    .unwrap()
+    .into_iter()
+    .collect::<HashSet<_>>();
 
     (0..=(*max_row))
         .map(|r| {
@@ -137,110 +116,18 @@ pub fn part2(input: &str) -> usize {
         .sum()
 }
 
-fn add_top(queue: &mut VecDeque<(usize, usize)>, current_position: &(usize, usize)) {
-    if current_position.0 == 0 {
-        return;
-    }
-    let top_position = (current_position.0 - 1, current_position.1);
-    queue.push_back(top_position);
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
-fn add_bottom(queue: &mut VecDeque<(usize, usize)>, current_position: &(usize, usize)) {
-    let bottom_position = (current_position.0 + 1, current_position.1);
-    queue.push_back(bottom_position);
-}
-fn add_left(queue: &mut VecDeque<(usize, usize)>, current_position: &(usize, usize)) {
-    if current_position.1 == 0 {
-        return;
-    }
-    let left_position = (current_position.0, current_position.1 - 1);
-    queue.push_back(left_position);
-}
-fn add_right(queue: &mut VecDeque<(usize, usize)>, current_position: &(usize, usize)) {
-    let right_position = (current_position.0, current_position.1 + 1);
-    queue.push_back(right_position);
-}
-fn check_top(
-    position: &(usize, usize),
-    pipes: &BTreeMap<(usize, usize), Pipe>,
-    queue: &mut VecDeque<(usize, usize)>,
-) -> bool {
-    use Pipe::*;
-    let top_position = (if position.0 > 0 { position.0 - 1 } else { 0 }, position.1);
-    let acceptable_pipe_types = vec![Vertical, Seven, F, Start];
-    pipes
-        .get(&top_position)
-        .and_then(|pipe_type| {
-            if acceptable_pipe_types.contains(pipe_type) {
-                add_top(queue, position);
-                Some(true)
-            } else {
-                None
-            }
-        })
-        .unwrap_or(false)
-}
-
-fn check_bottom(
-    position: &(usize, usize),
-    pipes: &BTreeMap<(usize, usize), Pipe>,
-    queue: &mut VecDeque<(usize, usize)>,
-) -> bool {
-    use Pipe::*;
-    let bottom_position = (position.0 + 1, position.1);
-    let acceptable_pipe_types = vec![Vertical, L, J, Start];
-    pipes
-        .get(&bottom_position)
-        .and_then(|pipe_type| {
-            if acceptable_pipe_types.contains(pipe_type) {
-                add_bottom(queue, position);
-                Some(true)
-            } else {
-                None
-            }
-        })
-        .unwrap_or(false)
-}
-
-fn check_left(
-    position: &(usize, usize),
-    pipes: &BTreeMap<(usize, usize), Pipe>,
-    queue: &mut VecDeque<(usize, usize)>,
-) -> bool {
-    use Pipe::*;
-    let left_position = (position.0, if position.1 > 0 { position.1 - 1 } else { 0 });
-    let acceptable_pipe_types = vec![Horizontal, L, F, Start];
-    pipes
-        .get(&left_position)
-        .and_then(|pipe_type| {
-            if acceptable_pipe_types.contains(pipe_type) {
-                add_left(queue, position);
-                Some(true)
-            } else {
-                None
-            }
-        })
-        .unwrap_or(false)
-}
-fn check_right(
-    position: &(usize, usize),
-    pipes: &BTreeMap<(usize, usize), Pipe>,
-    queue: &mut VecDeque<(usize, usize)>,
-) -> bool {
-    use Pipe::*;
-    let right_position = (position.0, position.1 + 1);
-    let acceptable_pipe_types = vec![Horizontal, Seven, J, Start];
-    pipes
-        .get(&right_position)
-        .and_then(|pipe_type| {
-            if acceptable_pipe_types.contains(pipe_type) {
-                add_right(queue, position);
-                Some(true)
-            } else {
-                None
-            }
-        })
-        .unwrap_or(false)
+#[derive(Debug, Clone, Copy)]
+struct PipeNode {
+    pos: (usize, usize),
+    going: Direction,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -253,6 +140,86 @@ enum Pipe {
     F,
     Ground,
     Start,
+}
+
+fn check_next(node: &PipeNode, pipes: &BTreeMap<(usize, usize), Pipe>) -> Option<PipeNode> {
+    use Pipe::*;
+    let next_position = match node.going {
+        Direction::Up => (
+            if node.pos.0 > 0 {
+                node.pos.0 - 1
+            } else {
+                return None;
+            },
+            node.pos.1,
+        ),
+        Direction::Down => (node.pos.0 + 1, node.pos.1),
+        Direction::Left => (
+            node.pos.0,
+            if node.pos.1 > 0 {
+                node.pos.1 - 1
+            } else {
+                return None;
+            },
+        ),
+        Direction::Right => (node.pos.0, node.pos.1 + 1),
+    };
+    let acceptable_pipe_types = match node.going {
+        Direction::Up => vec![Vertical, Seven, F, Start],
+        Direction::Down => vec![Vertical, L, J, Start],
+        Direction::Left => vec![Horizontal, L, F, Start],
+        Direction::Right => vec![Horizontal, Seven, J, Start],
+    };
+
+    pipes.get(&next_position).and_then(|pipe_type| {
+        if acceptable_pipe_types.contains(pipe_type) {
+            let going_next = get_next_going_direction(pipe_type, node.going);
+            Some(PipeNode {
+                pos: next_position,
+                going: going_next,
+            })
+        } else {
+            None
+        }
+    })
+}
+
+fn get_next_going_direction(pipe: &Pipe, incoming_going: Direction) -> Direction {
+    use Pipe::*;
+    match pipe {
+        Vertical => match incoming_going {
+            Direction::Up => Direction::Up,
+            Direction::Down => Direction::Down,
+            _ => panic!("not valid incoming direction"),
+        },
+        Horizontal => match incoming_going {
+            Direction::Left => Direction::Left,
+            Direction::Right => Direction::Right,
+            _ => panic!("not valid incoming direction"),
+        },
+        L => match incoming_going {
+            Direction::Down => Direction::Right,
+            Direction::Left => Direction::Up,
+            _ => panic!("not valid incoming direction"),
+        },
+        J => match incoming_going {
+            Direction::Down => Direction::Left,
+            Direction::Right => Direction::Up,
+            _ => panic!("not valid incoming direction"),
+        },
+        Seven => match incoming_going {
+            Direction::Up => Direction::Left,
+            Direction::Right => Direction::Down,
+            _ => panic!("not valid incoming direction"),
+        },
+        F => match incoming_going {
+            Direction::Up => Direction::Right,
+            Direction::Left => Direction::Down,
+            _ => panic!("not valid incoming direction"),
+        },
+        Ground => panic!("Ground is not a pipe"),
+        Start => Direction::Up, // arbitrary direction
+    }
 }
 
 #[cfg(test)]
