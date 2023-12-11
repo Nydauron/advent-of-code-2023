@@ -1,5 +1,4 @@
 use itertools::Itertools;
-use rayon::iter::ParallelBridge;
 use std::collections::BTreeMap;
 
 pub fn part2(input: &str) -> i64 {
@@ -24,24 +23,10 @@ pub fn part2_helper(input: &str, scale_factor: usize) -> i64 {
     let max_row = input.lines().count();
     let max_col = input.lines().map(|line| line.len()).max().unwrap();
     let mut no_galaxy_rows = (0..max_row)
-        .filter_map(|r| {
-            let found_galaxy = (0..max_col).any(|c| space.contains_key(&(r, c)));
-            if !found_galaxy {
-                Some(r)
-            } else {
-                None
-            }
-        })
+        .filter(|r| !(0..max_col).any(|c| space.contains_key(&(*r, c))))
         .collect::<Vec<_>>();
     let mut no_galaxy_cols = (0..max_col)
-        .filter_map(|c| {
-            let found_galaxy = (0..max_row).any(|r| space.contains_key(&(r, c)));
-            if !found_galaxy {
-                Some(c)
-            } else {
-                None
-            }
-        })
+        .filter(|c| !(0..max_row).any(|r| space.contains_key(&(r, *c))))
         .collect::<Vec<_>>();
 
     let mut new_max_row = max_row;
@@ -64,8 +49,6 @@ pub fn part2_helper(input: &str, scale_factor: usize) -> i64 {
         }
     }
 
-    let max_row = new_max_row + 1;
-
     for c in (0..max_col).rev() {
         if no_galaxy_cols.is_empty() {
             break;
@@ -76,12 +59,20 @@ pub fn part2_helper(input: &str, scale_factor: usize) -> i64 {
             }
             no_galaxy_cols.pop();
         }
-        for r in 0..max_row {
-            if let Some((key, space_tile)) = space.remove_entry(&(r, c)) {
+        let galaxies = space
+            .keys()
+            .filter(|pos| pos.1 == c)
+            .cloned()
+            .collect::<Vec<_>>();
+        galaxies
+            .into_iter()
+            .filter_map(|key| space.remove_entry(&key))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .for_each(|(key, space_tile)| {
                 let new_key = (key.0, key.1 + (no_galaxy_cols.len() * (scale_factor - 1)));
                 space.insert(new_key, space_tile);
-            }
-        }
+            });
     }
 
     space
