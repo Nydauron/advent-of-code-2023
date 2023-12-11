@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 
 pub fn part1(input: &str) -> i64 {
     let mut space = input
@@ -9,20 +9,20 @@ pub fn part1(input: &str) -> i64 {
             line.chars()
                 .enumerate()
                 .filter_map(move |(col_idx, c)| match c {
-                    '#' => Some(((row_idx, col_idx), SpaceTile::Galaxy)),
+                    '#' => Some((row_idx, col_idx)),
                     '.' => None,
                     c => panic!("Not a valid character: {}", c),
                 })
         })
-        .collect::<BTreeMap<_, _>>();
+        .collect::<BTreeSet<_>>();
 
     let max_row = input.lines().count();
     let max_col = input.lines().map(|line| line.len()).max().unwrap();
     let mut no_galaxy_rows = (0..max_row)
-        .filter(|r| !(0..max_col).any(|c| space.contains_key(&(*r, c))))
+        .filter(|r| !(0..max_col).any(|c| space.contains(&(*r, c))))
         .collect::<Vec<_>>();
     let mut no_galaxy_cols = (0..max_col)
-        .filter(|c| !(0..max_row).any(|r| space.contains_key(&(r, *c))))
+        .filter(|c| !(0..max_row).any(|r| space.contains(&(r, *c))))
         .collect::<Vec<_>>();
 
     let mut new_max_row = max_row;
@@ -37,10 +37,10 @@ pub fn part1(input: &str) -> i64 {
             no_galaxy_rows.pop();
         }
         for c in 0..max_col {
-            if let Some((key, space_tile)) = space.remove_entry(&(r, c)) {
-                let new_key = (key.0 + no_galaxy_rows.len(), key.1);
+            if space.remove(&(r, c)) {
+                let new_key = (r + no_galaxy_rows.len(), c);
                 new_max_row = new_max_row.max(new_key.0);
-                space.insert(new_key, space_tile);
+                space.insert(new_key);
             }
         }
     }
@@ -56,23 +56,23 @@ pub fn part1(input: &str) -> i64 {
             no_galaxy_cols.pop();
         }
         let galaxies = space
-            .keys()
+            .iter()
             .filter(|pos| pos.1 == c)
             .cloned()
             .collect::<Vec<_>>();
         galaxies
-            .into_iter()
-            .filter_map(|key| space.remove_entry(&key))
+            .iter()
+            .filter(|key| space.remove(&key))
             .collect::<Vec<_>>()
-            .into_iter()
-            .for_each(|(key, space_tile)| {
+            .iter()
+            .for_each(|key| {
                 let new_key = (key.0, key.1 + no_galaxy_cols.len());
-                space.insert(new_key, space_tile);
+                space.insert(new_key);
             });
     }
 
     space
-        .keys()
+        .iter()
         .combinations(2)
         .map(|galaxies| {
             debug_assert_eq!(galaxies.len(), 2);
@@ -82,11 +82,6 @@ pub fn part1(input: &str) -> i64 {
             (b.0 as i64 - a.0 as i64).abs() + (b.1 as i64 - a.1 as i64).abs()
         })
         .sum::<i64>()
-}
-
-#[derive(Debug, Copy, Clone)]
-enum SpaceTile {
-    Galaxy,
 }
 
 #[cfg(test)]
