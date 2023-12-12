@@ -44,16 +44,11 @@ fn evaluate_record_pattern(partial_record: &str, groupings: &[usize]) -> usize {
         .rev()
     {
         let group_size = grouping_slice.first().unwrap();
-        for (record_start, prefix_char, record_slice, suffix_char) in (0..partial_record.len())
+        for (record_start, record_slice, suffix_char) in (0..partial_record.len())
             .filter_map(|start| {
                 (start + *group_size <= partial_record.len()).then(|| {
                     (
                         start,
-                        if start > 0 {
-                            partial_record.chars().nth(start - 1)
-                        } else {
-                            None
-                        },
                         &partial_record[start..(start + *group_size)],
                         if start + group_size > 0 {
                             partial_record.chars().nth(start + group_size)
@@ -74,7 +69,6 @@ fn evaluate_record_pattern(partial_record: &str, groupings: &[usize]) -> usize {
             };
             let window_end = *grouping_slice.first().unwrap();
             if !record_slice.contains('.')
-                && prefix_char.and_then(|c| Some(c != '#')).unwrap_or(true)
                 && suffix_char.and_then(|c| Some(c != '#')).unwrap_or(true)
             {
                 count += mem
