@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 
 use itertools::Itertools;
 
@@ -15,76 +15,85 @@ pub fn part1(input: &str) -> usize {
         .map(|(record, group_str)| {
             let groups = group_str
                 .split(',')
-                .map(|g| g.parse::<u32>().expect("Grouping is not a number"))
+                .map(|g| g.parse::<usize>().expect("Grouping is not a number"))
                 .collect_vec();
 
-            evaluate_record_pattern(record, &groups)
+            evaluate_record_pattern(record, groups.as_slice())
         })
         .sum()
 }
 
-fn evaluate_record_pattern(partial_record: &str, groupings: &Vec<u32>) -> usize {
-    let question_mark_idxes = partial_record
-        .char_indices()
-        .filter_map(|(idx, c)| (c == '?').then_some(idx))
-        .enumerate()
-        .map(|(idx, record_idx)| (record_idx, idx))
-        .collect::<HashMap<_, _>>();
-    let count = (0..2_u64.pow(question_mark_idxes.len() as u32))
-        .filter(|permutation| {
-            // create strings by substituting ?
-            let constructed_string = partial_record
-                .char_indices()
-                .map(|(idx, c)| {
-                    if let Some(bit_offset) = question_mark_idxes.get(&idx) {
-                        let mask = 1 << bit_offset;
-                        if permutation & mask != 0 {
-                            return '#';
-                        }
-                    }
-                    c
+fn evaluate_record_pattern(partial_record: &str, groupings: &[usize]) -> usize {
+    let mut mem = BTreeMap::new();
+
+    for (record_start, record_slice) in (0..=partial_record.len())
+        .map(|start| (start, &partial_record[start..]))
+        .rev()
+    {
+        if record_slice.contains('#') {
+            continue;
+        }
+        mem.insert((record_start, groupings.len()), 1);
+    }
+
+    for (grouping_start, grouping_slice) in (0..groupings.len())
+        .map(|start| (start, &groupings[start..]))
+        .rev()
+    {
+        let group_size = grouping_slice.first().unwrap();
+        for (record_start, prefix_char, record_slice, suffix_char) in (0..partial_record.len())
+            .filter_map(|start| {
+                (start + *group_size <= partial_record.len()).then(|| {
+                    (
+                        start,
+                        if start > 0 {
+                            partial_record.chars().nth(start - 1)
+                        } else {
+                            None
+                        },
+                        &partial_record[start..(start + *group_size)],
+                        if start + group_size > 0 {
+                            partial_record.chars().nth(start + group_size)
+                        } else {
+                            None
+                        },
+                    )
                 })
-                .collect::<String>()
-                .replace("?", ".");
+            })
+            .rev()
+        {
+            let mut count = if record_slice.chars().nth(0).unwrap() != '#' {
+                mem.get(&(partial_record.len().min(record_start + 1), grouping_start))
+                    .cloned()
+                    .unwrap_or(0)
+            } else {
+                0
+            };
+            let window_end = *grouping_slice.first().unwrap();
+            if !record_slice.contains('.')
+                && prefix_char.and_then(|c| Some(c != '#')).unwrap_or(true)
+                && suffix_char.and_then(|c| Some(c != '#')).unwrap_or(true)
+            {
+                count += mem
+                    .get(&(
+                        partial_record.len().min(record_start + window_end + 1),
+                        grouping_start + 1,
+                    ))
+                    .unwrap_or(&0);
+            }
 
-            // store in iterator and map over all checking if true
-            // return count number of successful checks
-            let is_valid = check_damage_record(constructed_string.as_str(), groupings);
-            // println!("{}: {}", constructed_string, is_valid);
-            is_valid
-        })
-        .count();
-    dbg!(count)
-}
-
-fn check_damage_record(record: &str, groupings: &Vec<u32>) -> bool {
-    let damage_idxes = record
-        .char_indices()
-        .filter_map(|(idx, c)| (c == '#').then_some(idx))
-        .collect_vec();
-    let damage_ids = damage_idxes
-        .iter()
-        .enumerate()
-        .map(|(idx, damage_idx)| damage_idx - idx)
-        .fold(BTreeMap::<usize, u32>::new(), |mut acc, damage_id| {
-            acc.entry(damage_id)
-                .and_modify(|curr| *curr += 1)
-                .or_insert(1);
-
-            acc
-        });
-
-    let is_valid = damage_ids
-        .values()
-        .zip(groupings.iter())
-        .all(|(id_count, group_count)| id_count == group_count)
-        && damage_ids.len() == groupings.len();
-
-    is_valid
+            if count > 0 {
+                mem.insert((record_start, grouping_start), count);
+            }
+        }
+    }
+    mem.get(&(0, 0)).cloned().unwrap()
 }
 
 #[cfg(test)]
 mod test {
+    use rstest::rstest;
+
     use super::*;
 
     #[test]
@@ -97,5 +106,23 @@ mod test {
 ?###???????? 3,2,1";
 
         assert_eq!(part1(input), 21);
+    }
+
+    #[rstest]
+    #[case("???.### 1,1,3", 1)]
+    #[case(".??..??...?##. 1,1,3", 4)]
+    #[case("?#?#?#?#?#?#?#? 1,3,1,6", 1)]
+    #[case("????.#...#... 4,1,1", 1)]
+    #[case("????.######..#####. 1,6,5", 4)]
+    #[case("?###???????? 3,2,1", 10)]
+    #[case("..?.?.??.. 1,1", 5)] // \/ \/ custom cases
+    #[case("?.#, 1,1", 1)]
+    #[case("?????.??#?#??#?###? 1,13", 5)] // \/ \/ from input.txt
+    #[case("?.?????#????????#??? 1,9,1,3,1", 5)]
+    #[case("..#???#????????.#.? 6,1,2,1,1,1", 1)]
+    #[case("???????????. 6,1", 10)]
+    #[case("?..#???#??. 1,3", 3)]
+    fn test_individual_lines(#[case] input: &str, #[case] expected: usize) {
+        assert_eq!(part1(input), expected)
     }
 }
