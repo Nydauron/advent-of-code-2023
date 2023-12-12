@@ -45,22 +45,21 @@ fn evaluate_record_pattern(partial_record: &str, groupings: &[usize]) -> usize {
     {
         let group_size = grouping_slice.first().unwrap();
         for (record_start, record_slice, suffix_char) in (0..partial_record.len())
-            .filter_map(|start| {
-                (start + *group_size <= partial_record.len()).then(|| {
-                    (
-                        start,
-                        &partial_record[start..(start + *group_size)],
-                        if start + group_size > 0 {
-                            partial_record.chars().nth(start + group_size)
-                        } else {
-                            None
-                        },
-                    )
-                })
+            .filter(|start| (start + group_size <= partial_record.len()))
+            .map(|start| {
+                (
+                    start,
+                    &partial_record[start..(start + *group_size)],
+                    if start + group_size > 0 {
+                        partial_record.chars().nth(start + group_size)
+                    } else {
+                        None
+                    },
+                )
             })
             .rev()
         {
-            let mut count = if record_slice.chars().nth(0).unwrap() != '#' {
+            let mut count = if !record_slice.starts_with('#') {
                 mem.get(&(partial_record.len().min(record_start + 1), grouping_start))
                     .cloned()
                     .unwrap_or(0)
@@ -68,9 +67,7 @@ fn evaluate_record_pattern(partial_record: &str, groupings: &[usize]) -> usize {
                 0
             };
             let window_end = *grouping_slice.first().unwrap();
-            if !record_slice.contains('.')
-                && suffix_char.and_then(|c| Some(c != '#')).unwrap_or(true)
-            {
+            if !record_slice.contains('.') && suffix_char.map(|c| c != '#').unwrap_or(true) {
                 count += mem
                     .get(&(
                         partial_record.len().min(record_start + window_end + 1),
