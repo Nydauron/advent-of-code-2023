@@ -1,21 +1,23 @@
 pub fn part1(input: &str) -> u32 {
-    input.split(',').map(|seq| calculate_hash(seq)).sum()
+    sum(input
+        .chars()
+        .fold((0, 0_u8), |(total, curr_hash_total), c| match c {
+            ',' => (total + curr_hash_total as u32, 0),
+            '\n' => (total, curr_hash_total),
+            c => {
+                if let Some(ascii) = c.as_ascii() {
+                    let value = ascii as u8;
+                    (total, curr_hash_total.wrapping_add(value).wrapping_mul(17))
+                } else {
+                    (total, curr_hash_total)
+                }
+            }
+        }))
 }
 
-fn calculate_hash(input: &str) -> u32 {
-    input.chars().fold(0_u32, |mut acc, c| {
-        if c == '\n' {
-            acc
-        } else {
-            if let Some(ascii) = c.as_ascii() {
-                let value = ascii as u8;
-                acc += value as u32;
-                acc *= 17;
-                acc %= 256;
-            }
-            acc
-        }
-    })
+#[inline]
+fn sum((a, b): (u32, u8)) -> u32 {
+    a + b as u32
 }
 
 #[cfg(test)]
