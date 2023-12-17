@@ -28,11 +28,10 @@ pub fn part2(input: &str) -> u64 {
         cost: -1 * (map.get(&source).unwrap().cost as i64),
         been_straight_for: 0,
         incoming_direction: Direction::East,
-        path: vec![],
     })]);
 
     let mut total_cost = None;
-    while let Some(Reverse(mut curr)) = queue.pop() {
+    while let Some(Reverse(curr)) = queue.pop() {
         if let Some(tile) = map.get_mut(&curr.pos) {
             if tile
                 .visited_with
@@ -60,7 +59,6 @@ pub fn part2(input: &str) -> u64 {
                 Direction::East,
                 Direction::West,
             ];
-            curr.path.push(curr.pos);
             if curr.been_straight_for < min_straight_length {
                 let offset = curr.incoming_direction.get_offset();
                 let straight_length = curr.been_straight_for + 1;
@@ -69,7 +67,6 @@ pub fn part2(input: &str) -> u64 {
                     incoming_direction: curr.incoming_direction,
                     been_straight_for: straight_length,
                     cost: curr.cost + tile.cost as i64,
-                    path: curr.path.clone(),
                 }))
             } else {
                 for &d in directions.iter().filter(|&d| {
@@ -88,7 +85,6 @@ pub fn part2(input: &str) -> u64 {
                         incoming_direction: d,
                         been_straight_for: straight_length,
                         cost: curr.cost + tile.cost as i64,
-                        path: curr.path.clone(),
                     }))
                 }
             }
@@ -137,7 +133,6 @@ struct NodeCost {
     cost: i64,
     been_straight_for: u8,
     incoming_direction: Direction,
-    path: Vec<(i64, i64)>,
 }
 
 impl Ord for NodeCost {
