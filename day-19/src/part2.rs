@@ -1,6 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
-    ops::RangeInclusive,
+    u16,
 };
 
 use nom::{
@@ -26,10 +26,10 @@ pub fn part2(input: &str) -> u64 {
     let mut queue = VecDeque::from([(
         "in",
         PartRange {
-            x_cool: (1..=4000),
-            musical: (1..=4000),
-            aerodynamic: (1..=4000),
-            shiny: (1..=4000),
+            x_cool: (1, 4000),
+            musical: (1, 4000),
+            aerodynamic: (1, 4000),
+            shiny: (1, 4000),
         },
     )]);
     let mut accepted_part_ranges: Vec<PartRange> = vec![];
@@ -43,226 +43,131 @@ pub fn part2(input: &str) -> u64 {
                 match conditional {
                     Condition::GreaterThan(property_condition) => match property_condition {
                         Property::XCool(boundary) => {
-                            if *property_ranges.x_cool.end() <= boundary {
-                                None
-                            } else {
-                                let (leftover, new_bounds) = (
-                                    *property_ranges.x_cool.start()..=boundary,
-                                    (boundary + 1)..=*property_ranges.x_cool.end(),
-                                );
-
-                                property_ranges.x_cool = leftover;
-                                let new_part_range = PartRange {
-                                    x_cool: new_bounds,
-                                    musical: property_ranges.musical.clone(),
-                                    aerodynamic: property_ranges.aerodynamic.clone(),
-                                    shiny: property_ranges.shiny.clone(),
-                                };
-                                match case.operation {
-                                    Operation::Goto(next_rule) => {
-                                        queue.push_back((next_rule, new_part_range));
-                                        None
-                                    }
-                                    Operation::Accept => Some(new_part_range),
-                                    Operation::Reject => None,
-                                }
-                            }
+                            let range = &mut property_ranges.x_cool;
+                            split_range_greater_than(*range, boundary).and_then(
+                                |(leftover, new_bounds)| {
+                                    *range = leftover;
+                                    let new_part_range = PartRange {
+                                        x_cool: new_bounds,
+                                        musical: property_ranges.musical,
+                                        aerodynamic: property_ranges.aerodynamic,
+                                        shiny: property_ranges.shiny,
+                                    };
+                                    follow_operation(&mut queue, new_part_range, case.operation)
+                                },
+                            )
                         }
                         Property::Musical(boundary) => {
-                            if *property_ranges.musical.end() <= boundary {
-                                None
-                            } else {
-                                let (leftover, new_bounds) = (
-                                    *property_ranges.musical.start()..=boundary,
-                                    (boundary + 1)..=*property_ranges.musical.end(),
-                                );
-
-                                property_ranges.musical = leftover;
-                                let new_part_range = PartRange {
-                                    x_cool: property_ranges.x_cool.clone(),
-                                    musical: new_bounds,
-                                    aerodynamic: property_ranges.aerodynamic.clone(),
-                                    shiny: property_ranges.shiny.clone(),
-                                };
-                                match case.operation {
-                                    Operation::Goto(next_rule) => {
-                                        queue.push_back((next_rule, new_part_range));
-                                        None
-                                    }
-                                    Operation::Accept => Some(new_part_range),
-                                    Operation::Reject => None,
-                                }
-                            }
+                            let range = &mut property_ranges.musical;
+                            split_range_greater_than(*range, boundary).and_then(
+                                |(leftover, new_bounds)| {
+                                    *range = leftover;
+                                    let new_part_range = PartRange {
+                                        x_cool: property_ranges.x_cool,
+                                        musical: new_bounds,
+                                        aerodynamic: property_ranges.aerodynamic,
+                                        shiny: property_ranges.shiny,
+                                    };
+                                    follow_operation(&mut queue, new_part_range, case.operation)
+                                },
+                            )
                         }
                         Property::Aerodynamic(boundary) => {
-                            if *property_ranges.aerodynamic.end() <= boundary {
-                                None
-                            } else {
-                                let (leftover, new_bounds) = (
-                                    *property_ranges.aerodynamic.start()..=boundary,
-                                    (boundary + 1)..=*property_ranges.aerodynamic.end(),
-                                );
-
-                                property_ranges.aerodynamic = leftover;
-                                let new_part_range = PartRange {
-                                    x_cool: property_ranges.x_cool.clone(),
-                                    musical: property_ranges.musical.clone(),
-                                    aerodynamic: new_bounds,
-                                    shiny: property_ranges.shiny.clone(),
-                                };
-                                match case.operation {
-                                    Operation::Goto(next_rule) => {
-                                        queue.push_back((next_rule, new_part_range));
-                                        None
-                                    }
-                                    Operation::Accept => Some(new_part_range),
-                                    Operation::Reject => None,
-                                }
-                            }
+                            let range = &mut property_ranges.aerodynamic;
+                            split_range_greater_than(*range, boundary).and_then(
+                                |(leftover, new_bounds)| {
+                                    *range = leftover;
+                                    let new_part_range = PartRange {
+                                        x_cool: property_ranges.x_cool,
+                                        musical: property_ranges.musical,
+                                        aerodynamic: new_bounds,
+                                        shiny: property_ranges.shiny,
+                                    };
+                                    follow_operation(&mut queue, new_part_range, case.operation)
+                                },
+                            )
                         }
                         Property::Shiny(boundary) => {
-                            if *property_ranges.shiny.end() <= boundary {
-                                None
-                            } else {
-                                let (leftover, new_bounds) = (
-                                    *property_ranges.shiny.start()..=boundary,
-                                    (boundary + 1)..=*property_ranges.shiny.end(),
-                                );
-
-                                property_ranges.shiny = leftover;
-                                let new_part_range = PartRange {
-                                    x_cool: property_ranges.x_cool.clone(),
-                                    musical: property_ranges.musical.clone(),
-                                    aerodynamic: property_ranges.aerodynamic.clone(),
-                                    shiny: new_bounds,
-                                };
-                                match case.operation {
-                                    Operation::Goto(next_rule) => {
-                                        queue.push_back((next_rule, new_part_range));
-                                        None
-                                    }
-                                    Operation::Accept => Some(new_part_range),
-                                    Operation::Reject => None,
-                                }
-                            }
+                            let range = &mut property_ranges.shiny;
+                            split_range_greater_than(*range, boundary).and_then(
+                                |(leftover, new_bounds)| {
+                                    *range = leftover;
+                                    let new_part_range = PartRange {
+                                        x_cool: property_ranges.x_cool,
+                                        musical: property_ranges.musical,
+                                        aerodynamic: property_ranges.aerodynamic,
+                                        shiny: new_bounds,
+                                    };
+                                    follow_operation(&mut queue, new_part_range, case.operation)
+                                },
+                            )
                         }
                     },
                     Condition::LessThan(property_condition) => match property_condition {
                         Property::XCool(boundary) => {
-                            if *property_ranges.x_cool.start() >= boundary {
-                                None
-                            } else {
-                                let (leftover, new_bounds) = (
-                                    boundary..=*property_ranges.x_cool.end(),
-                                    *property_ranges.x_cool.start()..=(boundary - 1),
-                                );
-
-                                property_ranges.x_cool = leftover;
-                                let new_part_range = PartRange {
-                                    x_cool: new_bounds,
-                                    musical: property_ranges.musical.clone(),
-                                    aerodynamic: property_ranges.aerodynamic.clone(),
-                                    shiny: property_ranges.shiny.clone(),
-                                };
-                                match case.operation {
-                                    Operation::Goto(next_rule) => {
-                                        queue.push_back((next_rule, new_part_range));
-                                        None
-                                    }
-                                    Operation::Accept => Some(new_part_range),
-                                    Operation::Reject => None,
-                                }
-                            }
+                            let range = &mut property_ranges.x_cool;
+                            split_range_less_than(*range, boundary).and_then(
+                                |(leftover, new_bounds)| {
+                                    *range = leftover;
+                                    let new_part_range = PartRange {
+                                        x_cool: new_bounds,
+                                        musical: property_ranges.musical,
+                                        aerodynamic: property_ranges.aerodynamic,
+                                        shiny: property_ranges.shiny,
+                                    };
+                                    follow_operation(&mut queue, new_part_range, case.operation)
+                                },
+                            )
                         }
                         Property::Musical(boundary) => {
-                            if *property_ranges.musical.start() >= boundary {
-                                None
-                            } else {
-                                let (leftover, new_bounds) = (
-                                    boundary..=*property_ranges.musical.end(),
-                                    *property_ranges.musical.start()..=(boundary - 1),
-                                );
-
-                                property_ranges.musical = leftover;
-                                let new_part_range = PartRange {
-                                    x_cool: property_ranges.x_cool.clone(),
-                                    musical: new_bounds,
-                                    aerodynamic: property_ranges.aerodynamic.clone(),
-                                    shiny: property_ranges.shiny.clone(),
-                                };
-                                match case.operation {
-                                    Operation::Goto(next_rule) => {
-                                        queue.push_back((next_rule, new_part_range));
-                                        None
-                                    }
-                                    Operation::Accept => Some(new_part_range),
-                                    Operation::Reject => None,
-                                }
-                            }
+                            let range = &mut property_ranges.musical;
+                            split_range_less_than(*range, boundary).and_then(
+                                |(leftover, new_bounds)| {
+                                    *range = leftover;
+                                    let new_part_range = PartRange {
+                                        x_cool: property_ranges.x_cool,
+                                        musical: new_bounds,
+                                        aerodynamic: property_ranges.aerodynamic,
+                                        shiny: property_ranges.shiny,
+                                    };
+                                    follow_operation(&mut queue, new_part_range, case.operation)
+                                },
+                            )
                         }
                         Property::Aerodynamic(boundary) => {
-                            if *property_ranges.aerodynamic.start() >= boundary {
-                                None
-                            } else {
-                                let (leftover, new_bounds) = (
-                                    boundary..=*property_ranges.aerodynamic.end(),
-                                    *property_ranges.aerodynamic.start()..=(boundary - 1),
-                                );
-
-                                property_ranges.aerodynamic = leftover;
-                                let new_part_range = PartRange {
-                                    x_cool: property_ranges.x_cool.clone(),
-                                    musical: property_ranges.musical.clone(),
-                                    aerodynamic: new_bounds,
-                                    shiny: property_ranges.shiny.clone(),
-                                };
-                                match case.operation {
-                                    Operation::Goto(next_rule) => {
-                                        queue.push_back((next_rule, new_part_range));
-                                        None
-                                    }
-                                    Operation::Accept => Some(new_part_range),
-                                    Operation::Reject => None,
-                                }
-                            }
+                            let range = &mut property_ranges.aerodynamic;
+                            split_range_less_than(*range, boundary).and_then(
+                                |(leftover, new_bounds)| {
+                                    *range = leftover;
+                                    let new_part_range = PartRange {
+                                        x_cool: property_ranges.x_cool,
+                                        musical: property_ranges.musical,
+                                        aerodynamic: new_bounds,
+                                        shiny: property_ranges.shiny,
+                                    };
+                                    follow_operation(&mut queue, new_part_range, case.operation)
+                                },
+                            )
                         }
                         Property::Shiny(boundary) => {
-                            if *property_ranges.shiny.start() >= boundary {
-                                None
-                            } else {
-                                let (leftover, new_bounds) = (
-                                    boundary..=*property_ranges.shiny.end(),
-                                    *property_ranges.shiny.start()..=(boundary - 1),
-                                );
-
-                                property_ranges.shiny = leftover;
-                                let new_part_range = PartRange {
-                                    x_cool: property_ranges.x_cool.clone(),
-                                    musical: property_ranges.musical.clone(),
-                                    aerodynamic: property_ranges.aerodynamic.clone(),
-                                    shiny: new_bounds,
-                                };
-                                match case.operation {
-                                    Operation::Goto(next_rule) => {
-                                        queue.push_back((next_rule, new_part_range));
-                                        None
-                                    }
-                                    Operation::Accept => Some(new_part_range),
-                                    Operation::Reject => None,
-                                }
-                            }
+                            let range = &mut property_ranges.shiny;
+                            split_range_less_than(*range, boundary).and_then(
+                                |(leftover, new_bounds)| {
+                                    *range = leftover;
+                                    let new_part_range = PartRange {
+                                        x_cool: property_ranges.x_cool,
+                                        musical: property_ranges.musical,
+                                        aerodynamic: property_ranges.aerodynamic,
+                                        shiny: new_bounds,
+                                    };
+                                    follow_operation(&mut queue, new_part_range, case.operation)
+                                },
+                            )
                         }
                     },
                 }
             } else {
-                match case.operation {
-                    Operation::Goto(next_rule) => {
-                        queue.push_back((next_rule, property_ranges.clone()));
-                        None
-                    }
-                    Operation::Accept => Some(property_ranges.clone()),
-                    Operation::Reject => None,
-                }
+                follow_operation(&mut queue, property_ranges, case.operation)
             }
         });
 
@@ -272,28 +177,68 @@ pub fn part2(input: &str) -> u64 {
     accepted_part_ranges
         .iter()
         .map(|part_range| {
-            (part_range.x_cool.end() - part_range.x_cool.start() + 1) as u64
-                * (part_range.musical.end() - part_range.musical.start() + 1) as u64
-                * (part_range.aerodynamic.end() - part_range.aerodynamic.start() + 1) as u64
-                * (part_range.shiny.end() - part_range.shiny.start() + 1) as u64
+            (part_range.x_cool.1 - part_range.x_cool.0 + 1) as u64
+                * (part_range.musical.1 - part_range.musical.0 + 1) as u64
+                * (part_range.aerodynamic.1 - part_range.aerodynamic.0 + 1) as u64
+                * (part_range.shiny.1 - part_range.shiny.0 + 1) as u64
         })
         .sum()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+fn split_range_greater_than(
+    range_to_split: (u16, u16),
+    boundary: u16,
+) -> Option<((u16, u16), (u16, u16))> {
+    (range_to_split.1 > boundary).then_some({
+        (
+            (range_to_split.0, boundary),
+            ((boundary + 1), range_to_split.1),
+        )
+    })
+}
+
+fn split_range_less_than(
+    range_to_split: (u16, u16),
+    boundary: u16,
+) -> Option<((u16, u16), (u16, u16))> {
+    (range_to_split.0 < boundary).then_some({
+        (
+            (boundary, range_to_split.1),
+            (range_to_split.0, boundary - 1),
+        )
+    })
+}
+
+fn follow_operation<'a>(
+    queue: &mut VecDeque<(&'a str, PartRange)>,
+    part_range: PartRange,
+    operation: Operation<'a>,
+) -> Option<PartRange> {
+    match operation {
+        Operation::Goto(next_rule) => {
+            queue.push_back((next_rule, part_range));
+            None
+        }
+        Operation::Accept => Some(part_range),
+        Operation::Reject => None,
+    }
+}
+
+// Each range is considered inclusive
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct PartRange {
-    x_cool: RangeInclusive<u32>,
-    musical: RangeInclusive<u32>,
-    aerodynamic: RangeInclusive<u32>,
-    shiny: RangeInclusive<u32>,
+    x_cool: (u16, u16),
+    musical: (u16, u16),
+    aerodynamic: (u16, u16),
+    shiny: (u16, u16),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Property {
-    XCool(u32),
-    Musical(u32),
-    Aerodynamic(u32),
-    Shiny(u32),
+    XCool(u16),
+    Musical(u16),
+    Aerodynamic(u16),
+    Shiny(u16),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -320,7 +265,7 @@ struct Rule<'a> {
     cases: Vec<Case<'a>>,
 }
 
-fn parse_property(property: &str, amount: u32) -> Result<Property, &'static str> {
+fn parse_property(property: &str, amount: u16) -> Result<Property, &'static str> {
     match property {
         "x" => Ok(Property::XCool(amount)),
         "m" => Ok(Property::Musical(amount)),
@@ -333,7 +278,7 @@ fn parse_property(property: &str, amount: u32) -> Result<Property, &'static str>
 fn parse_conditional(input: &str) -> IResult<&str, Condition> {
     let (input, property_initial) = is_not("<>")(input)?;
     let (input, inequality) = one_of("<>")(input)?;
-    let (input, property_amount) = complete::u32(input)?;
+    let (input, property_amount) = complete::u16(input)?;
     let property =
         parse_property(property_initial, property_amount).expect("property was not valid");
     match inequality {
