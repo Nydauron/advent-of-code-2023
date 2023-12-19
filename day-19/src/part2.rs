@@ -32,7 +32,7 @@ pub fn part2(input: &str) -> u64 {
             shiny: (1, 4000),
         },
     )]);
-    let mut accepted_part_ranges: Vec<PartRange> = vec![];
+    let mut accepted_combination_count: u64 = 0;
 
     while let Some((rule_name, mut property_ranges)) = queue.pop_front() {
         let curr = rules
@@ -171,18 +171,17 @@ pub fn part2(input: &str) -> u64 {
             }
         });
 
-        accepted_part_ranges.extend(accepted);
+        accepted_combination_count += accepted
+            .map(|part_range| {
+                (part_range.x_cool.1 - part_range.x_cool.0 + 1) as u64
+                    * (part_range.musical.1 - part_range.musical.0 + 1) as u64
+                    * (part_range.aerodynamic.1 - part_range.aerodynamic.0 + 1) as u64
+                    * (part_range.shiny.1 - part_range.shiny.0 + 1) as u64
+            })
+            .sum::<u64>();
     }
 
-    accepted_part_ranges
-        .iter()
-        .map(|part_range| {
-            (part_range.x_cool.1 - part_range.x_cool.0 + 1) as u64
-                * (part_range.musical.1 - part_range.musical.0 + 1) as u64
-                * (part_range.aerodynamic.1 - part_range.aerodynamic.0 + 1) as u64
-                * (part_range.shiny.1 - part_range.shiny.0 + 1) as u64
-        })
-        .sum()
+    accepted_combination_count
 }
 
 fn split_range_greater_than(
