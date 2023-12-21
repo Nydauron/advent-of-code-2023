@@ -195,15 +195,7 @@ fn part2_steps(input: &str, steps: usize) -> usize {
     // add the 4 directional plots (all same color)
     // 202_299 * (202_299 * 2) + (202_299 * 2 + 1) internal boards (checked)
     // (202_299 + 1) * (202_299 + 1) red boards (opposite boards)
-    //
-    // TOO HIGH: 594612339905084
-    // TOO LOW:  594606461471777
-    // TOO HIGH: 594606568488999
-    // wrong:    594606568463233
-    //           594606461446272
-    //           594606455175141
-    // CORRECT:  594606492802848
-    //
+
     let red_internal_plots = plot_repetition.pow(2);
     let black_internal_plots = (plot_repetition - 1).pow(2);
 
