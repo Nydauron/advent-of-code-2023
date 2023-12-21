@@ -193,8 +193,9 @@ fn part2_steps(input: &str, steps: usize) -> usize {
     // each small triangle gets repeated 202_300 times (all opposite color)
     // each chopped triangle get repeated 202_300 - 1 times (all same color)
     // add the 4 directional plots (all same color)
-    // 202_299 * (202_299 * 2) + (202_299 * 2 + 1) internal boards (checked)
-    // (202_299 + 1) * (202_299 + 1) red boards (opposite boards)
+    // (202_300 - 1) * (202_300 - 1) * 2 + ((202_300 - 1) * 2 + 1) internal boards
+    // (202_300 - 1) * (202_300 - 1) black boards (same color)
+    // (202_300) * (202_300) red boards (opposite color)
 
     let red_internal_plots = plot_repetition.pow(2);
     let black_internal_plots = (plot_repetition - 1).pow(2);
